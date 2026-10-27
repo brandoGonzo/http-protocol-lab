@@ -1,0 +1,31 @@
+@startuml
+participant Client
+participant Server
+
+== HTTP/1.1 over TCP + TLS 1.3 (2 RTT to first byte) ==
+Client -> Server: TCP SYN
+Server --> Client: SYN-ACK
+Client -> Server: ACK + TLS ClientHello (ALPN http/1.1)
+Server --> Client: ServerHello, Cert, Finished
+Client -> Server: Finished + GET /a
+Server --> Client: 200 /a
+note over Client, Server: One request in flight per connection; browsers open ~6 connections
+
+== HTTP/2 over TCP + TLS 1.3 (2 RTT to first byte) ==
+Client -> Server: TCP SYN
+Server --> Client: SYN-ACK
+Client -> Server: ACK + TLS ClientHello (ALPN h2)
+Server --> Client: ServerHello, Cert, Finished
+Client -> Server: Preface + SETTINGS + HEADERS streams 1,3,5 (HPACK)
+Server --> Client: DATA frames interleaved on streams 1,3,5
+note over Client, Server: Multiplexed on one TCP conn; one lost packet stalls ALL streams (TCP HOL)
+
+== HTTP/3 over QUIC (1 RTT, 0-RTT on resume) ==
+Client -> Server: QUIC Initial (TLS ClientHello, ALPN h3)
+Server --> Client: Initial + Handshake (ServerHello, Cert, Finished)
+Client -> Server: Handshake Finished + HEADERS streams 0,4,8 (QPACK)
+Server --> Client: STREAM frames, independent per stream
+note over Client, Server: Loss only stalls the affected stream; connection ID enables migration
+Client -> Server: [resumed] 0-RTT GET with session ticket
+Server --> Client: 200 in the first round trip
+@enduml

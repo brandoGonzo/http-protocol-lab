@@ -1,0 +1,23 @@
+flowchart LR
+  subgraph Host[Docker host]
+    subgraph ClientNet[client_net]
+      C[client container<br/>Go timing client + h2load]
+    end
+    R[router container<br/>NET_ADMIN, tc netem<br/>latency, jitter, loss]
+    subgraph ServerNet[server_net]
+      S[server container<br/>Go server]
+    end
+  end
+  C -->|TCP 443 ALPN http/1.1 or h2| R
+  C -->|UDP 443 QUIC h3| R
+  R --> S
+  S --> H1[TCP listener<br/>HTTP/1.1 + HTTP/2]
+  S --> H3[QUIC listener<br/>quic-go HTTP/3]
+  H1 --> HD[shared http.Handler<br/>test assets]
+  H3 --> HD
+  E[experiments YAML] --> RUN[runner]
+  RUN --> C
+  C --> RES[results JSON]
+  S --> Q[qlog + pcap]
+  RES --> D[dashboard on GitHub Pages]
+  Q --> D
