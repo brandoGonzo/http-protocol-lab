@@ -1,0 +1,7 @@
+bin/
+*.pcap
+*.qlog
+certs/*.pem
+!certs/README.md
+results/raw/
+.env

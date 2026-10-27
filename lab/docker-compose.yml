@@ -1,0 +1,2 @@
+# TODO(M2): client, router (NET_ADMIN, netem), server on two bridge networks
+services: {}
