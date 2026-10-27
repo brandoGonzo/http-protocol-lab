@@ -16,6 +16,8 @@ services:
     build: ./server-stub
     cap_add: [NET_ADMIN]
     depends_on: [router]
+    environment:
+      QUIC_GO_DISABLE_GSO: "true"
     networks:
       server_net:
         ipv4_address: 10.10.2.10

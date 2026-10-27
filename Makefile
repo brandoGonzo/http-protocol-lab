@@ -1,6 +1,6 @@
 COMPOSE = docker compose -f lab/docker-compose.yml
 PROFILE ?= rtt50
-N ?= 10
+N ?=
 
 certs:
 	mkcert -install && mkcert -cert-file certs/cert.pem -key-file certs/key.pem localhost server 127.0.0.1

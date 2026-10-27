@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
-# usage: N=10 bash lab/scripts/verify.sh <profile>
+# usage: [N=10] bash lab/scripts/verify.sh <profile>
+# Default N: 30 for loss profiles, 10 otherwise.
 # Every curl run is a fresh process = cold connection (no reuse, no 0-RTT).
 # Compare tls= and ttfb= across protocols; curl's connect time is not comparable for QUIC.
 set -euo pipefail
 DC="docker compose -f lab/docker-compose.yml"
 PROFILE="${1:-rtt50}"
-N="${N:-10}"
 URL="https://server/1mb.bin"
+if [[ -z "${N:-}" ]]; then
+  if [[ "$PROFILE" == loss* || "${LOSS_PCT:-0}" != "0" ]]; then N=30; else N=10; fi
+fi
 
 apply() {
   $DC exec -T -e RTT_MS="${RTT_MS:-}" -e LOSS_PCT="${LOSS_PCT:-}" router netem "$PROFILE" > /dev/null
@@ -21,6 +24,15 @@ apply
 
 echo "[1] route from client to server (expect: via 10.10.1.254)"
 $DC exec -T client ip route get 10.10.2.10
+
+echo "[1b] segmentation offloads (expect: all off)"
+warn=0
+for s in server client router; do
+  out=$($DC exec -T "$s" sh -c 'for i in $(ls /sys/class/net | grep -v "^lo$"); do ethtool -k "$i" | grep -E "^(tcp-segmentation|generic-segmentation|generic-receive)-offload" | sed "s/^/$i /"; done')
+  echo "$out" | sed "s/^/  $s: /"
+  if echo "$out" | grep -q ': on'; then warn=1; fi
+done
+if [[ $warn -eq 1 ]]; then echo "  WARNING: offloads still on; netem loss will be per super-packet, not per packet" >&2; fi
 
 echo "[2] ping (expect ttl=63 = one routed hop, rtt ~ profile RTT)"
 $DC exec -T client ping -c 1 server | sed -n 2p

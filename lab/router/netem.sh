@@ -4,6 +4,7 @@
 # Delay is split evenly across both directions; loss applies to the downlink (server -> client).
 # Applying a profile deletes and re-adds the qdisc so counters start at zero.
 set -e
+PROFILES="clean rtt50 rtt150 loss1 loss2 loss5 custom show"
 UP=$(ip -o -4 addr show | awk '/10\.10\.2\.254/{print $2}')
 DOWN=$(ip -o -4 addr show | awk '/10\.10\.1\.254/{print $2}')
 LIMIT=10000
@@ -22,9 +23,11 @@ case "${1:-show}" in
   loss1)  d=25; l=1 ;;
   loss2)  d=25; l=2 ;;
   loss5)  d=25; l=5 ;;
-  custom) d=$(( ${RTT_MS:?set RTT_MS} / 2 )); l=${LOSS_PCT:-0} ;;
+  custom)
+    if [ -z "${RTT_MS:-}" ]; then echo "error: custom profile requires RTT_MS" >&2; exit 2; fi
+    d=$(( RTT_MS / 2 )); l=${LOSS_PCT:-0} ;;
   show)   ;;
-  *) echo "unknown profile: $1"; exit 1 ;;
+  *) echo "error: unknown profile '$1'. valid: $PROFILES" >&2; exit 2 ;;
 esac
 
 if [ -n "$d" ]; then
