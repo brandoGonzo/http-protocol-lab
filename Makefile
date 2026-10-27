@@ -1,5 +1,6 @@
 COMPOSE = docker compose -f lab/docker-compose.yml
 PROFILE ?= rtt50
+N ?= 10
 
 certs:
 	mkcert -install && mkcert -cert-file certs/cert.pem -key-file certs/key.pem localhost server 127.0.0.1
@@ -18,7 +19,7 @@ netem:
 	$(COMPOSE) exec router netem $(PROFILE)
 
 lab-verify:
-	bash lab/scripts/verify.sh $(PROFILE)
+	N=$(N) bash lab/scripts/verify.sh $(PROFILE)
 
 lab-shell-%:
 	$(COMPOSE) exec $* sh
