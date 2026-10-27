@@ -1,2 +1,41 @@
-# TODO(M2): client, router (NET_ADMIN, netem), server on two bridge networks
-services: {}
+name: http-protocol-lab
+
+services:
+  router:
+    build: ./router
+    cap_add: [NET_ADMIN]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+    networks:
+      client_net:
+        ipv4_address: 10.10.1.254
+      server_net:
+        ipv4_address: 10.10.2.254
+
+  server:
+    build: ./server-stub
+    cap_add: [NET_ADMIN]
+    depends_on: [router]
+    networks:
+      server_net:
+        ipv4_address: 10.10.2.10
+
+  client:
+    build: ./client
+    cap_add: [NET_ADMIN]
+    depends_on: [router, server]
+    extra_hosts:
+      - "server:10.10.2.10"
+    networks:
+      client_net:
+        ipv4_address: 10.10.1.10
+
+networks:
+  client_net:
+    ipam:
+      config:
+        - subnet: 10.10.1.0/24
+  server_net:
+    ipam:
+      config:
+        - subnet: 10.10.2.0/24

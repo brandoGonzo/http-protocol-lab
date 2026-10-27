@@ -1,3 +1,6 @@
+COMPOSE = docker compose -f lab/docker-compose.yml
+PROFILE ?= rtt50
+
 certs:
 	mkcert -install && mkcert -cert-file certs/cert.pem -key-file certs/key.pem localhost server 127.0.0.1
 
@@ -6,9 +9,18 @@ build:
 	go build -o bin/client ./client/cmd/client
 
 lab-up:
-	docker compose -f lab/docker-compose.yml up -d --build
+	$(COMPOSE) up -d --build
 
 lab-down:
-	docker compose -f lab/docker-compose.yml down
+	$(COMPOSE) down
 
-.PHONY: certs build lab-up lab-down
+netem:
+	$(COMPOSE) exec router netem $(PROFILE)
+
+lab-verify:
+	bash lab/scripts/verify.sh $(PROFILE)
+
+lab-shell-%:
+	$(COMPOSE) exec $* sh
+
+.PHONY: certs build lab-up lab-down netem lab-verify
